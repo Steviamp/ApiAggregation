@@ -1,5 +1,4 @@
-﻿using ApiAggregation.Application.Dtos;
-using ApiAggregation.Domain.Entities;
+﻿using ApiAggregation.Domain.Entities;
 
 namespace ApiAggregation.Application.Interfaces
 {
