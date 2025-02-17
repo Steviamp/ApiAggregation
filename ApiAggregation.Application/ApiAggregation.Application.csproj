@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ApiAggregation.Domain\ApiAggregation.Domain.csproj" />
+    <ProjectReference Include="..\ApiAggregation.Infrastructure\ApiAggregation.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

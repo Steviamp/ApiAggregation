@@ -5,6 +5,6 @@ namespace ApiAggregation.Application.Interfaces
 {
     public interface IAggregationService
     {
-        Task<AggregatedDataDto> GetAggregatedDataAsync();
+        Task<AggregatedData> GetAggregatedDataAsync();
     }
 }

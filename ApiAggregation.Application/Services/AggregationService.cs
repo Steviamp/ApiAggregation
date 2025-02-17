@@ -1,43 +1,66 @@
-﻿using ApiAggregation.Application.Dtos;
-using ApiAggregation.Application.Interfaces;
+﻿using ApiAggregation.Application.Interfaces;
 using ApiAggregation.Domain.Entities;
+using ApiAggregation.Domain.Interfaces;
+using ApiAggregation.Infrastructure.HttpClients;
 
 namespace ApiAggregation.Application.Services
 {
     public class AggregationService : IAggregationService
     {
-        private readonly IExternalApiService<WeatherData> _weatherService;
-        private readonly IExternalApiService<NewsData> _newsService;
-        private readonly IExternalApiService<GithubData> _githubService;
+        private readonly WeatherApiClient _weatherClient;
+        private readonly NewsApiClient _newsClient;
+        private readonly GithubApiClient _githubClient;
 
         public AggregationService(
-            IExternalApiService<WeatherData> weatherService,
-            IExternalApiService<NewsData> newsService,
-            IExternalApiService<GithubData> githubService)
+            WeatherApiClient weatherClient,
+            NewsApiClient newsClient,
+            GithubApiClient githubClient)
         {
-            _weatherService = weatherService;
-            _newsService = newsService;
-            _githubService = githubService;
+            _weatherClient = weatherClient;
+            _newsClient = newsClient;
+            _githubClient = githubClient;
         }
 
-        public async Task<AggregatedDataDto> GetAggregatedDataAsync()
+        public async Task<AggregatedData> GetAggregatedDataAsync()
         {
             try
             {
-                var tasks = new Task[]
-                {
-                    _weatherService.FetchDataAsync(),
-                    _newsService.FetchDataAsync(),
-                    _githubService.FetchDataAsync()
-                };
+                var weatherTask = _weatherClient.GetWeatherAsync("London");
+                var newsTask = _newsClient.GetNewsAsync();
+                var githubTask = _githubClient.GetTrendingRepositoriesAsync();
 
-                await Task.WhenAll(tasks);
+                await Task.WhenAll(weatherTask, newsTask, githubTask);
 
-                return new AggregatedDataDto
+                var weather = weatherTask.Result;
+                var news = newsTask.Result;
+                var github = githubTask.Result;
+
+                return new AggregatedData
                 {
-                    WeatherData = new List<WeatherData> { tasks[0].Result },
-                    NewsData = new List<NewsData> { tasks[1].Result },
-                    GithubData = new List<GithubData> { tasks[2].Result }
+                    WeatherData = new List<WeatherData>
+                    {
+                        new WeatherData
+                        {
+                            City = weather.Name,
+                            Temperature = weather.Main.Temp,
+                            Condition = weather.Weather.FirstOrDefault()?.Description ?? "Unknown",
+                            Timestamp = DateTime.UtcNow
+                        }
+                    },
+                    NewsData = news.Articles.Select(a => new NewsData
+                    {
+                        Title = a.Title,
+                        Description = a.Description,
+                        Source = a.Source,
+                        PublishedAt = a.PublishedAt
+                    }).ToList(),
+                    GithubData = github.Items.Select(r => new GithubData
+                    {
+                        RepositoryName = r.Name,
+                        Description = r.Description,
+                        Stars = r.StargazersCount,
+                        LastUpdated = r.UpdatedAt
+                    }).ToList()
                 };
             }
             catch (Exception ex)
